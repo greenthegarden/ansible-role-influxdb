@@ -1,0 +1,14 @@
+---
+# defaults file for ansible-role-influxdb
+
+influxdb_image_name: influxdb
+influxdb_image_tag: 1.7.9
+
+influxdb_volume_name: influxdb
+
+influxdb_service_name: influxdb
+influxdb_service_ports_http: 8086
+influxdb_service_ports: [
+  { label: http, value: "{{ influxdb_service_ports_http }}" },
+]
+influxdb_service_restart_policy: always
