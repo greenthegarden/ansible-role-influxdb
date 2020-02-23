@@ -5,6 +5,7 @@ influxdb_image_name: influxdb
 influxdb_image_tag: 1.7.9
 
 influxdb_volume_name: influxdb
+influxdb_volume_recreate: always
 
 influxdb_service_name: influxdb
 influxdb_service_ports_http: 8086
