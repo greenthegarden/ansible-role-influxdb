@@ -1,15 +1,12 @@
 ---
 
-- name: "Create {{ influxdb_volume_name }} docker volume"
-  docker_volume:
-    name: "{{ influxdb_volume_name }}"
-
-- name: "deregister {{ influxdb_service_name }} service with the local consul agent"
+- name: "Unregister {{ influxdb_service_name }} service with the local consul agent"
   consul:
+    host: "{{ consul_client_address }}"
     service_name: "{{ influxdb_service_name }}-{{ item.value }}"
-    service_port: "{{ item.value }}"
+    service_port: "{{ item.value | int }}"
     state: absent
-  with_dict: "{{ influxdb_service_ports }}"
+  loop: "{{ influxdb_service_ports }}"
   when: service_consul_running
 
 - name: "Pull image {{ influxdb_image_name }}:{{ influxdb_image_tag }}"
@@ -18,23 +15,37 @@
     tag: "{{ influxdb_image_tag }}"
     source: pull
 
+- name: "Stop and remove {{ influxdb_service_name }} container"
+  docker_container:
+    name: "{{ influxdb_service_name }}"
+    state: absent
+  when: influxdb_volume_recreate != 'never'
+
+- name: "Create {{ influxdb_volume_name }} docker volume"
+  docker_volume:
+    name: "{{ influxdb_volume_name }}"
+    recreate: "{{ influxdb_volume_recreate }}"
+    state: present
+
+# docker run -p 8086:8086 -v influxdb:/var/lib/influxdb influxdb
 - name: "Run image {{ influxdb_image_name }}:{{ influxdb_image_tag }} as service {{ influxdb_service_name }}"
   docker_container:
     name: "{{ influxdb_service_name }}"
     image: "{{ influxdb_image_name }}:{{ influxdb_image_tag }}"
     published_ports:
       - "{{ influxdb_service_ports_http }}:8086"
-    volumes:
-      - "{{ influxdb_volume_name }}:/var/lib/influxdb"
     recreate: yes
     restart_policy: always
     state: started
+    volumes:
+      - "{{ influxdb_volume_name }}:/var/lib/influxdb"
   register: influxdb_service_launched
 
-- name: "register {{ influxdb_service_name }} service with the local consul agent"
+- name: "Register {{ influxdb_service_name }} service with the local consul agent"
   consul:
+    host: "{{ consul_client_address }}"
     service_name: "{{ influxdb_service_name}}-{{ item.value }}"
-    service_port: "{{ item.value }}"
+    service_port: "{{ item.value | int }}"
     state: present
-  with_dict: "{{ influxdb_service_ports }}"
+  loop: "{{ influxdb_service_ports }}"
   when: service_consul_running
